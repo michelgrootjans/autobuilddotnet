@@ -7,23 +7,18 @@ namespace AutoBuild
     internal class Runner
     {
         private const string MS_BUILD_PATH = @"C:\WINDOWS\Microsoft.NET\Framework\v3.5\MSBuild.exe";
-        List<string> failures;
-        private bool startOutputting;
         private readonly Action<string> write;
-        private readonly Action  clear;
-        private string arguments;
-        private MessageParser parser;
+        private readonly Action clear;
+        private readonly string arguments;
+        public bool IsIdle { get; private set; }
 
         public Runner(string arguments, Action<string> write, Action clear)
         {
             this.write = write;
-            this.arguments = arguments;
             this.clear = clear;
+            this.arguments = arguments;
             IsIdle = true;
-            parser = new MessageParser(write, clear);
         }
-
-        public bool IsIdle { get; private set; }
 
         public void Run(object state)
         {
@@ -37,7 +32,7 @@ namespace AutoBuild
             }
             catch (Exception e)
             {
-                WriteError(e.ToString());
+                write("Error received: " + e);
             }
             finally
             {
@@ -48,31 +43,29 @@ namespace AutoBuild
 
         private void SartProcess()
         {
-            var startInfo = new ProcessStartInfo(MS_BUILD_PATH)
-                                {
-                                    Arguments = arguments,
-                                    UseShellExecute = false,
-                                    RedirectStandardOutput = true,
-                                    RedirectStandardError = true,
-                                    RedirectStandardInput = true
-                                };
-            var msbuild = new Process {StartInfo = startInfo};
-            msbuild.OutputDataReceived += parser.OutputDataReceived;
-            msbuild.ErrorDataReceived += parser.ErrorDataReceived;
-            msbuild.EnableRaisingEvents = true;
+            using (var parser = new MessageParser(write, clear))
+            {
+                var startInfo = new ProcessStartInfo(MS_BUILD_PATH)
+                                    {
+                                        Arguments = arguments,
+                                        UseShellExecute = false,
+                                        RedirectStandardOutput = true,
+                                        RedirectStandardError = true,
+                                        RedirectStandardInput = true
+                                    };
+                var msbuild = new Process {StartInfo = startInfo};
+                msbuild.OutputDataReceived += parser.OutputDataReceived;
+                msbuild.ErrorDataReceived += parser.ErrorDataReceived;
+                msbuild.EnableRaisingEvents = true;
 
-            msbuild.Start();
-            msbuild.BeginOutputReadLine();
-            msbuild.BeginErrorReadLine();
-            msbuild.StandardInput.Close();
+                msbuild.Start();
+                msbuild.BeginOutputReadLine();
+                msbuild.BeginErrorReadLine();
+                msbuild.StandardInput.Close();
 
-            msbuild.WaitForExit();
+                msbuild.WaitForExit();
+                parser.Dispose();
+            }
         }
-
-        private void WriteError(string value)
-        {
-            write("Error received: " + value);
-        }
-
     }
 }

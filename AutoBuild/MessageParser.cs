@@ -4,11 +4,12 @@ using System.Diagnostics;
 
 namespace AutoBuild
 {
-    internal class MessageParser
+    internal class MessageParser : IDisposable
     {
         private readonly Action<string> write;
         private readonly Action clear;
         private bool startOutputting;
+        private bool stopOutputting;
         private List<string> failures;
 
         public MessageParser(Action<string> write, Action clear)
@@ -33,7 +34,7 @@ namespace AutoBuild
         private bool IsWorthPrinting(string data)
         {
             if (string.IsNullOrEmpty(data)) return false;
-
+            if (stopOutputting) return false;
 
             if (data.StartsWith("  Tests run"))
             {
@@ -63,13 +64,18 @@ namespace AutoBuild
             var parsedNumberOfFailures = int.Parse(numberOfFailures);
             if (parsedNumberOfFailures == 0)
             {
-                startOutputting = false;
+                stopOutputting = true;
                 clear();
             }
             for (var index = 1; index < parsedNumberOfFailures + 1; index++)
                 list.Add(string.Format("  {0})", index));
 
             return list;
+        }
+
+        public void Dispose()
+        {
+            //this is where we'll print failed tests grouped by namespace and class
         }
     }
 }
