@@ -1,81 +1,49 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using AutoBuild.MessageHandlers;
 
 namespace AutoBuild
 {
     internal class MessageParser : IDisposable
     {
-        private readonly Action<string> write;
-        private readonly Action clear;
-        private bool startOutputting;
-        private bool stopOutputting;
-        private List<string> failures;
+        private readonly IWriter writer;
+        private readonly IEnumerable<IMessageHandler> messageHandlers;
 
-        public MessageParser(Action<string> write, Action clear)
+        public MessageParser(IWriter writer, params IMessageHandler[] messageHandlers)
         {
-            this.write = write;
-            this.clear = clear;
+            this.writer = writer;
+            this.messageHandlers = new List<IMessageHandler>(messageHandlers);
         }
 
         public void ErrorDataReceived(object sender, DataReceivedEventArgs e)
         {
-            var value = e.Data;
-            if (string.IsNullOrEmpty(value)) return;
-            write(value);
+            if (string.IsNullOrEmpty(e.Data)) return;
+            writer.WriteError(e.Data);
         }
 
         public void OutputDataReceived(object sender, DataReceivedEventArgs e)
         {
-            if (IsWorthPrinting(e.Data))
-                write(e.Data.Trim());
+            if (string.IsNullOrEmpty(e.Data)) return;
+            Handle(e.Data);
         }
 
-        private bool IsWorthPrinting(string data)
+        private void Handle(string data)
         {
-            if (string.IsNullOrEmpty(data)) return false;
-            if (stopOutputting) return false;
-
-            if (data.StartsWith("  Tests run"))
+            foreach (var messageHandler in messageHandlers)
             {
-                startOutputting = true;
-                failures = ParseFailures(data);
-                return true;
+                if (messageHandler.Handle(data)) break;
             }
-            if (!startOutputting) return false;
-
-            if (failures.Exists(data.StartsWith)) return true;
-            if (data.StartsWith("  Test Case Failures")) return true;
-            if (data.Contains("Expected:")) return true;
-            if (data.Contains("But was:")) return true;
-            if (data.Contains("-----")) return true;
-            return false;
+#if DEBUG
+            writer.WriteDebug(data);
+#endif
         }
 
-        private List<string> ParseFailures(string data)
-        {
-            const string literal = "Failures: ";
-            var startindex = data.IndexOf(literal) + literal.Length;
-            var endIndex = data.IndexOf(",", startindex);
-            var numberOfFailures = data.Substring(startindex, endIndex - startindex);
-
-            var list = new List<string>();
-
-            var parsedNumberOfFailures = int.Parse(numberOfFailures);
-            if (parsedNumberOfFailures == 0)
-            {
-                stopOutputting = true;
-                clear();
-            }
-            for (var index = 1; index < parsedNumberOfFailures + 1; index++)
-                list.Add(string.Format("  {0})", index));
-
-            return list;
-        }
 
         public void Dispose()
         {
-            //this is where we'll print failed tests grouped by namespace and class
+            foreach (var messageHandler in messageHandlers)
+                messageHandler.Dispose();
         }
     }
 }
