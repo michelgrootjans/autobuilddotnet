@@ -5,21 +5,30 @@ namespace AutoBuild
 {
     internal class Program
     {
-        private static Runner runner;
+        private static BuildRunner buildRunner;
 
         private static void Main(string[] args)
         {
-            runner = new Runner(args[0], Console.WriteLine, Console.Clear);
-            using (new Timer(RunIfNotBusy, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(20)))
+            buildRunner = new BuildRunner(args[0], new ConsoleWriter());
+            using (new Timer(RunIfNotBusy, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(30)))
             {
                 Console.ReadLine();
+                if (buildRunner.IsRunning)
+                    WillCloseWhenDone();
             }
         }
 
         private static void RunIfNotBusy(object state)
         {
-            if(runner.IsIdle)
-                runner.Run(state);
+            buildRunner.Run(state);
+        }
+
+        private static void WillCloseWhenDone()
+        {
+            var color = Console.ForegroundColor;
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine("Build is running... will close when done.");
+            Console.ForegroundColor = color;
         }
     }
 }
