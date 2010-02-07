@@ -1,10 +1,11 @@
 namespace AutoBuild
 {
-    internal interface IWriter
+    public interface IWriter
     {
         void WriteTitle(string message);
         void WriteError(string message);
-        void WriteMessage(string message);
+        void WriteInfo(string message);
         void WriteDebug(string message);
+        void WriteSuccess(string message);
     }
 }

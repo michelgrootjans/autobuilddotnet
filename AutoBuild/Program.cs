@@ -10,17 +10,12 @@ namespace AutoBuild
         private static void Main(string[] args)
         {
             buildRunner = new BuildRunner(args[0], new ConsoleWriter());
-            using (new Timer(RunIfNotBusy, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(30)))
+            using (new Timer(buildRunner.Run, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5)))
             {
                 Console.ReadLine();
                 if (buildRunner.IsRunning)
                     WillCloseWhenDone();
             }
-        }
-
-        private static void RunIfNotBusy(object state)
-        {
-            buildRunner.Run(state);
         }
 
         private static void WillCloseWhenDone()

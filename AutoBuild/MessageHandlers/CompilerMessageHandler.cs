@@ -14,7 +14,7 @@ namespace AutoBuild.MessageHandlers
         {
             if (CanHandle(message))
             {
-                writer.WriteMessage(message);
+                writer.WriteError(message);
                 return true;
             }
             return false;

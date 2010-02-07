@@ -20,12 +20,12 @@ namespace AutoBuild
 
         public void Run(object state)
         {
+            if (IsRunning) return;
             var startTime = DateTime.Now;
             try
             {
-                if (IsRunning) return;
                 IsRunning = true;
-                writer.WriteMessage("Starting build...");
+                writer.WriteInfo("Starting build...");
                 SartProcess();
             }
             catch (Exception e)
@@ -35,11 +35,12 @@ namespace AutoBuild
             finally
             {
                 var seconds = Math.Round((DateTime.Now - startTime).TotalSeconds);
-                writer.WriteMessage(string.Format("Build ended (took {0} s).", seconds));
+                writer.WriteInfo(string.Format("Build ended (took {0} s).", seconds));
+                writer.WriteInfo("*****************");
                 IsRunning = false;
             }
         }
-
+        
         private void SartProcess()
         {
             var handlers = new IMessageHandler[]
@@ -60,8 +61,8 @@ namespace AutoBuild
                                         RedirectStandardInput = true
                                     };
                 var process = new Process {StartInfo = startInfo};
-                process.OutputDataReceived += parser.OutputDataReceived;
-                process.ErrorDataReceived += parser.ErrorDataReceived;
+                process.OutputDataReceived += (sender, args) => parser.OutputDataReceived(args.Data);
+                process.ErrorDataReceived += (sender, args) => parser.ErrorDataReceived(args.Data);
                 process.EnableRaisingEvents = true;
 
                 process.Start();

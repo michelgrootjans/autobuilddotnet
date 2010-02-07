@@ -21,7 +21,7 @@ namespace AutoBuild
             WriteMessage(ConsoleColor.Red, message);
         }
 
-        public void WriteMessage(string message)
+        public void WriteInfo(string message)
         {
             WriteMessage(ConsoleColor.White, message);
         }
@@ -29,6 +29,11 @@ namespace AutoBuild
         public void WriteDebug(string message)
         {
             WriteMessage(ConsoleColor.Gray, message);
+        }
+
+        public void WriteSuccess(string message)
+        {
+            WriteMessage(ConsoleColor.Green, message);
         }
 
         private void WriteMessage(ConsoleColor color, string message)
