@@ -14,25 +14,22 @@ namespace Autobuild.Tests
         private IWriter writer;
         private List<IMessageHandler> messageHandlers;
         private IMessageHandler handler1;
+        private IMessageHandler handler2;
 
         [SetUp]
         public void Setup()
         {
             writer = MockRepository.GenerateMock<IWriter>();
             handler1 = MockRepository.GenerateMock<IMessageHandler>();
+            handler2 = MockRepository.GenerateMock<IMessageHandler>();
             messageHandlers = new List<IMessageHandler>();
-            parser = new MessageParser(writer, messageHandlers);
+            parser = new MessageParser(null, messageHandlers);
         }
 
         [Test]
-        public void blah()
+        public void OutputDataReceived_without_messagehandlers_does_nothing()
         {
             parser.OutputDataReceived("hello world");
-            writer.AssertWasNotCalled(w => w.WriteDebug(Arg<string>.Is.Anything));
-            writer.AssertWasNotCalled(w => w.WriteError(Arg<string>.Is.Anything));
-            writer.AssertWasNotCalled(w => w.WriteInfo(Arg<string>.Is.Anything));
-            writer.AssertWasNotCalled(w => w.WriteSuccess((Arg<string>.Is.Anything)));
-            writer.AssertWasNotCalled(w => w.WriteTitle(Arg<string>.Is.Anything));
         }
 
         [Test]
@@ -43,6 +40,25 @@ namespace Autobuild.Tests
             handler1.AssertWasCalled(h => h.Handle("hello world"));
         }
 
+        [Test]
+        public void OutputDataReceived_with_two_handlers_calls_both_handlers()
+        {
+            messageHandlers.Add(handler1);
+            messageHandlers.Add(handler2);
+            parser.OutputDataReceived("hello world");
+            handler1.AssertWasCalled(h => h.Handle("hello world"));
+            handler2.AssertWasCalled(h => h.Handle("hello world"));
+        }
 
+        [Test]
+        public void OutputDataReceived_with_two_handler_when_one_handler_handles_the_message()
+        {
+            messageHandlers.Add(handler1);
+            handler1.Stub(h => h.Handle("hello world")).Return(true);
+            messageHandlers.Add(handler2);
+            parser.OutputDataReceived("hello world");
+            handler1.AssertWasCalled(h => h.Handle("hello world"));
+            handler2.AssertWasNotCalled(h => h.Handle("hello world"));
+        }
     }
 }
